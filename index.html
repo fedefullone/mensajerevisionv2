@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cajon Revision</title>
+  <link rel="icon" href="intra.png" type="image/png">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Incluimos SheetJS para leer el Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <!-- Encabezado con imagen superior -->
+  <div class="header">
+    <img src="intra.png" alt="Logardo" class="header-image">
+  </div>
+
+  <div class="container">
+    <div class="file-upload-container">
+      <h1>Pedidos en revisión</h1>
+      <input type="file" id="excelFileInput" accept=".xlsx, .xls">
+    </div>
+  </div>
+  
+  <div id="ordersContainer" class="container">
+    <!-- Aquí se generará dinámicamente la tabla con los pedidos -->
+  </div>
+
+  <script>
+    // Al seleccionar el archivo Excel, se procesa y se genera la vista de pedidos
+    document.getElementById('excelFileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        // Convertir la hoja a JSON; defval: "" para campos vacíos
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+        generateOrders(jsonData);
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    // Función para generar la tabla de pedidos usando los campos requeridos
+    function generateOrders(data) {
+      const container = document.getElementById('ordersContainer');
+      container.innerHTML = ""; // Limpiar contenido previo
+
+      // Crear tabla y asignar la clase para estilos
+      const table = document.createElement('table');
+      table.classList.add('orders-table');
+
+      // Crear fila de encabezado
+      const headerRow = document.createElement('tr');
+      const headers = ['Pedido', 'Nombre', 'Seller', 'Celular', 'Acción'];
+      headers.forEach(headerText => {
+        const th = document.createElement('th');
+        th.textContent = headerText;
+        headerRow.appendChild(th);
+      });
+      table.appendChild(headerRow);
+
+      // Crear una fila por cada pedido del Excel completo
+      data.forEach(order => {
+        const pedido  = order['pedido']  || "";
+        const nombre  = order['nombre']  || "";
+        const seller  = order['seller']  || "";
+        const celular = order['telefono'] || "";
+
+        const row = document.createElement('tr');
+
+        // Agregar celdas para pedido, nombre, seller y celular
+        [pedido, nombre, seller, celular].forEach(text => {
+          const td = document.createElement('td');
+          td.textContent = text;
+          row.appendChild(td);
+        });
+
+        // Agregar la celda con el botón para enviar WhatsApp
+        const actionTd = document.createElement('td');
+        const button = document.createElement('button');
+        button.textContent = "Enviar por WhatsApp";
+        button.addEventListener('click', () => {
+          const mensaje = `Hola ${nombre}! te hablo desde INTRALOG SA por tu pedido ${pedido} de ${seller}. No pudimos realizar la entrega. Me podrás pasar la ubicación/dirección para dejarles bien detallado al sector.\n\nCalle: \nNúmero: \nLocalidad: \nProvincia: \nCP: \nDepto:`;
+          const encodedMensaje = encodeURIComponent(mensaje);
+          const url = `https://wa.me/${celular}?text=${encodedMensaje}`;
+          window.open(url, '_blank');
+          // Cambiar el botón a "Enviado" y a color verde
+          button.textContent = "Enviado";
+          button.style.backgroundColor = "green";
+          button.disabled = true;
+        });
+        actionTd.appendChild(button);
+        row.appendChild(actionTd);
+
+        table.appendChild(row);
+      });
+
+      container.appendChild(table);
+    }
+  </script>
+</body>
+</html>
