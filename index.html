@@ -7,6 +7,7 @@
   <link rel="icon" href="intra.png" type="image/png" />
   <link rel="stylesheet" href="styles.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     /* Toast */
     #toast {
@@ -31,10 +32,35 @@
       opacity: 1;
       bottom: 50px;
     }
+
+    /* Animaciones */
+    @keyframes fadeInSlide {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    .new-row {
+      animation: fadeInSlide 0.4s ease;
+    }
+
+    @keyframes bounce {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .added-bounce {
+      animation: bounce 0.3s ease;
+    }
   </style>
 </head>
 <body>
-  <!-- Encabezado -->
   <div class="header">
     <img src="intra.png" alt="Logardo" class="header-image" />
   </div>
@@ -42,20 +68,19 @@
   <div class="container">
     <div class="file-upload-container">
       <h1>Pedidos en revisión</h1>
-      <input type="file" id="excelFileInput" accept=".xlsx, .xls" />
-    </div>
+      <label for="excelFileInput" class="custom-file-label">📂 Seleccionar archivo Excel</label>
+      <input type="file" id="excelFileInput" accept=".xlsx, .xls" hidden />
+      <span id="fileNameDisplay" class="file-name-display">Ningún archivo seleccionado</span>
+          </div>
   </div>
 
   <div id="ordersContainer" class="container"></div>
-
   <div id="addedOrdersContainer" class="container"></div>
 
-  <!-- Botón Copiar -->
   <div class="container">
     <button class="copy-button" onclick="copiarPedidos()">Copiar</button>
   </div>
 
-  <!-- Toast -->
   <div id="toast">¡Pedidos copiados!</div>
 
   <script>
@@ -73,6 +98,12 @@
       };
       reader.readAsArrayBuffer(file);
     });
+
+    document.getElementById("excelFileInput").addEventListener("change", function () {
+  const fileName = this.files[0] ? this.files[0].name : "Ningún archivo seleccionado";
+  document.getElementById("fileNameDisplay").textContent = fileName;
+});
+
 
     function generateOrders(data) {
       const container = document.getElementById("ordersContainer");
@@ -123,6 +154,10 @@
         addButton.textContent = "Agregar";
         addButton.addEventListener("click", () => {
           addOrderToAddedSection({ pedido, nombre, seller });
+          addButton.textContent = "Agregado";
+          addButton.style.backgroundColor = "green";
+          addButton.classList.add("added-bounce");
+          setTimeout(() => addButton.classList.remove("added-bounce"), 300);
         });
         addTd.appendChild(addButton);
         row.appendChild(addTd);
@@ -154,6 +189,8 @@
       const { pedido, nombre, seller } = order;
 
       const row = document.createElement("tr");
+      row.classList.add("new-row");
+
       [pedido, nombre, seller].forEach((text) => {
         const td = document.createElement("td");
         td.textContent = text;
@@ -206,7 +243,12 @@
       const data = [new ClipboardItem({ "text/html": blob })];
 
       navigator.clipboard.write(data).then(() => {
-        showToast("¡Tabla copiada con formato!");
+        showToast("¡Pedidos copiados!");
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.7 }
+        });
       }).catch((err) => {
         console.error("Error al copiar:", err);
         showToast("Error al copiar la tabla.");
