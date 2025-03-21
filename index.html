@@ -1,94 +1,116 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Cajon Revision</title>
-  <link rel="icon" href="intra.png" type="image/png">
-  <link rel="stylesheet" href="styles.css">
-  <!-- Incluimos SheetJS para leer el Excel -->
+  <link rel="icon" href="intra.png" type="image/png" />
+  <link rel="stylesheet" href="styles.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    /* Toast */
+    #toast {
+      visibility: hidden;
+      min-width: 250px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 10px;
+      padding: 16px;
+      position: fixed;
+      z-index: 1;
+      bottom: 30px;
+      right: 30px;
+      font-size: 1rem;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out, bottom 0.5s ease-in-out;
+    }
+
+    #toast.show {
+      visibility: visible;
+      opacity: 1;
+      bottom: 50px;
+    }
+  </style>
 </head>
 <body>
-  <!-- Encabezado con imagen superior -->
+  <!-- Encabezado -->
   <div class="header">
-    <img src="intra.png" alt="Logardo" class="header-image">
+    <img src="intra.png" alt="Logardo" class="header-image" />
   </div>
 
   <div class="container">
     <div class="file-upload-container">
       <h1>Pedidos en revisión</h1>
-      <input type="file" id="excelFileInput" accept=".xlsx, .xls">
+      <input type="file" id="excelFileInput" accept=".xlsx, .xls" />
     </div>
   </div>
-  
-  <div id="ordersContainer" class="container">
-    <!-- Aquí se generará dinámicamente la tabla con los pedidos -->
+
+  <div id="ordersContainer" class="container"></div>
+
+  <div id="addedOrdersContainer" class="container"></div>
+
+  <!-- Botón Copiar -->
+  <div class="container">
+    <button class="copy-button" onclick="copiarPedidos()">Copiar</button>
   </div>
 
+  <!-- Toast -->
+  <div id="toast">¡Pedidos copiados!</div>
+
   <script>
-    // Al seleccionar el archivo Excel, se procesa y se genera la vista de pedidos
-    document.getElementById('excelFileInput').addEventListener('change', function(e) {
+    document.getElementById("excelFileInput").addEventListener("change", function (e) {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = function (e) {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: "array" });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        // Convertir la hoja a JSON; defval: "" para campos vacíos
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
         generateOrders(jsonData);
       };
       reader.readAsArrayBuffer(file);
     });
 
-    // Función para generar la tabla de pedidos usando los campos requeridos
     function generateOrders(data) {
-      const container = document.getElementById('ordersContainer');
-      container.innerHTML = ""; // Limpiar contenido previo
+      const container = document.getElementById("ordersContainer");
+      container.innerHTML = "";
 
-      // Crear tabla y asignar la clase para estilos
-      const table = document.createElement('table');
-      table.classList.add('orders-table');
+      const table = document.createElement("table");
+      table.classList.add("orders-table");
 
-      // Crear fila de encabezado
-      const headerRow = document.createElement('tr');
-      const headers = ['Pedido', 'Nombre', 'Seller', 'Celular', 'Acción'];
-      headers.forEach(headerText => {
-        const th = document.createElement('th');
+      const headerRow = document.createElement("tr");
+      const headers = ["Pedido", "Nombre", "Seller", "Celular", "Acción", "Agregar"];
+      headers.forEach((headerText) => {
+        const th = document.createElement("th");
         th.textContent = headerText;
         headerRow.appendChild(th);
       });
       table.appendChild(headerRow);
 
-      // Crear una fila por cada pedido del Excel completo
-      data.forEach(order => {
-        const pedido  = order['pedido']  || "";
-        const nombre  = order['nombre']  || "";
-        const seller  = order['seller']  || "";
-        const celular = order['telefono'] || "";
+      data.forEach((order) => {
+        const pedido = order["pedido"] || "";
+        const nombre = order["nombre"] || "";
+        const seller = order["seller"] || "";
+        const celular = order["telefono"] || "";
 
-        const row = document.createElement('tr');
-
-        // Agregar celdas para pedido, nombre, seller y celular
-        [pedido, nombre, seller, celular].forEach(text => {
-          const td = document.createElement('td');
+        const row = document.createElement("tr");
+        [pedido, nombre, seller, celular].forEach((text) => {
+          const td = document.createElement("td");
           td.textContent = text;
           row.appendChild(td);
         });
 
-        // Agregar la celda con el botón para enviar WhatsApp
-        const actionTd = document.createElement('td');
-        const button = document.createElement('button');
+        const actionTd = document.createElement("td");
+        const button = document.createElement("button");
         button.textContent = "Enviar por WhatsApp";
-        button.addEventListener('click', () => {
+        button.addEventListener("click", () => {
           const mensaje = `Hola ${nombre}! te hablo desde INTRALOG SA por tu pedido ${pedido} de ${seller}. No pudimos realizar la entrega. Me podrás pasar la ubicación/dirección para dejarles bien detallado al sector.\n\nCalle: \nNúmero: \nLocalidad: \nProvincia: \nCP: \nDepto:`;
           const encodedMensaje = encodeURIComponent(mensaje);
           const url = `https://wa.me/${celular}?text=${encodedMensaje}`;
-          window.open(url, '_blank');
-          // Cambiar el botón a "Enviado" y a color verde
+          window.open(url, "_blank");
           button.textContent = "Enviado";
           button.style.backgroundColor = "green";
           button.disabled = true;
@@ -96,10 +118,108 @@
         actionTd.appendChild(button);
         row.appendChild(actionTd);
 
+        const addTd = document.createElement("td");
+        const addButton = document.createElement("button");
+        addButton.textContent = "Agregar";
+        addButton.addEventListener("click", () => {
+          addOrderToAddedSection({ pedido, nombre, seller });
+        });
+        addTd.appendChild(addButton);
+        row.appendChild(addTd);
+
         table.appendChild(row);
       });
 
       container.appendChild(table);
+    }
+
+    function addOrderToAddedSection(order) {
+      const addedContainer = document.getElementById("addedOrdersContainer");
+
+      const table = addedContainer.querySelector("table") || document.createElement("table");
+      if (!table.classList.contains("orders-table")) {
+        table.classList.add("orders-table");
+
+        const headerRow = document.createElement("tr");
+        const headers = ["Pedido", "Nombre", "Seller", "Estado", "OBS"];
+        headers.forEach((headerText) => {
+          const th = document.createElement("th");
+          th.textContent = headerText;
+          headerRow.appendChild(th);
+        });
+        table.appendChild(headerRow);
+        addedContainer.appendChild(table);
+      }
+
+      const { pedido, nombre, seller } = order;
+
+      const row = document.createElement("tr");
+      [pedido, nombre, seller].forEach((text) => {
+        const td = document.createElement("td");
+        td.textContent = text;
+        row.appendChild(td);
+      });
+
+      const estadoTd = document.createElement("td");
+      estadoTd.textContent = "En revisión";
+      row.appendChild(estadoTd);
+
+      const obsTd = document.createElement("td");
+      obsTd.textContent = "Pasar a redespacho";
+      row.appendChild(obsTd);
+
+      table.appendChild(row);
+    }
+
+    function copiarPedidos() {
+      const table = document.querySelector("#addedOrdersContainer table");
+      if (!table) {
+        showToast("No hay pedidos para copiar.");
+        return;
+      }
+
+      const clone = table.cloneNode(true);
+
+      const styleCell = (cell, isHeader = false) => {
+        cell.style.border = "1px solid #ddd";
+        cell.style.padding = "8px";
+        cell.style.textAlign = "center";
+        cell.style.fontFamily = "Segoe UI, Tahoma, Geneva, Verdana, sans-serif";
+        cell.style.fontSize = "14px";
+        if (isHeader) {
+          cell.style.backgroundColor = "#cc0000";
+          cell.style.color = "#fff";
+          cell.style.fontWeight = "bold";
+        }
+      };
+
+      clone.querySelectorAll("tr").forEach((row, i) => {
+        const isHeader = i === 0;
+        row.querySelectorAll("th, td").forEach((cell) => styleCell(cell, isHeader));
+      });
+
+      clone.style.borderCollapse = "collapse";
+      clone.style.width = "100%";
+
+      const html = clone.outerHTML;
+      const blob = new Blob([html], { type: "text/html" });
+      const data = [new ClipboardItem({ "text/html": blob })];
+
+      navigator.clipboard.write(data).then(() => {
+        showToast("¡Tabla copiada con formato!");
+      }).catch((err) => {
+        console.error("Error al copiar:", err);
+        showToast("Error al copiar la tabla.");
+      });
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.className = "show";
+      setTimeout(() => {
+        toast.className = toast.className.replace("show", "");
+      }, 3000);
     }
   </script>
 </body>
